@@ -53,8 +53,8 @@ async def startup_event():
         if count == 0:
             print("Populando banco com 5.000 registros simulados...")
             
-            statuses = ['SUCESSO', 'SUCESSO', 'SUCESSO', 'FALHA', 'PROCESSANDO', 'PENDENTE']
-            types = ['EMPRESA', 'EMPRESA', 'EMPRESA', 'PESSOA']
+            statuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'FAILED', 'PROCESSING', 'CANCELED']
+            types = ['COMPANY', 'COMPANY', 'COMPANY', 'PERSON']
             
             sql = """
                 INSERT INTO api_enrichments_seed 
@@ -105,8 +105,8 @@ async def get_enrichments(
 ):
     verify_token(authorization)
 
-    # Simulação de Rate Limit (Erro 429) - 10% de chance
-    if random.random() < 0.1:
+    # Simulação de Rate Limit (Erro 429) - 5% de chance
+    if random.random() < 0.05:
         raise HTTPException(status_code=429, detail="Too Many Requests - Simulação")
 
     conn = get_db_connection()

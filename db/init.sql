@@ -1,5 +1,7 @@
 -- ENUMS PARA PADRONIZAÇÃO DE STATUS
-CREATE TYPE status_enum AS ENUM ('SUCESSO', 'FALHA', 'PROCESSANDO', 'PENDENTE');
+
+CREATE TYPE status_enum    AS ENUM ('PROCESSING', 'COMPLETED', 'FAILED', 'CANCELED');
+CREATE TYPE status_enum_PT AS ENUM ('SUCESSO', 'FALHOU', 'EM_PROCESSAMENTO', 'CANCELADO');
 
 --  TABELA DE SEED
 CREATE TABLE IF NOT EXISTS api_enrichments_seed (
@@ -59,7 +61,7 @@ CREATE TABLE IF NOT EXISTS gold (
     
     total_contatos INTEGER NOT NULL CHECK (total_contatos >= 0),              
     tipo_contato TEXT NOT NULL,                   
-    status_processamento status_enum NOT NULL,           
+    status_processamento status_enum_PT NOT NULL,           
     
     data_criacao TIMESTAMPTZ NOT NULL,              
     data_atualizacao TIMESTAMPTZ NOT NULL,          
@@ -86,7 +88,7 @@ CREATE TABLE IF NOT EXISTS estado_pipeline_dw (
     nome_pipeline VARCHAR(50) PRIMARY KEY,            -- Nome (bronze ou gold)
     data_ultimo_processo TIMESTAMPTZ NOT NULL,        -- Data da última execução com sucesso
     valor_marcador TEXT NOT NULL,                     -- O valor do marcador (pode ser data ou ID)
-    status status_enum NOT NULL,                      -- 'SUCESSO', 'RODANDO', 'FALHOU', 'PENDENTE'
+    status TEXT NOT NULL,                             
     total_registros_processados INTEGER NOT NULL DEFAULT 0 CHECK (total_registros_processados >= 0)
 );
 
@@ -94,6 +96,6 @@ CREATE TABLE IF NOT EXISTS estado_pipeline_dw (
 -- Inseririndo estados iniciais
 INSERT INTO estado_pipeline_dw (nome_pipeline, data_ultimo_processo, valor_marcador, status)
 VALUES 
-    ('bronze', '1970-01-01 00:00:00+00', '1970-01-01T00:00:00Z', 'PENDENTE'),
-    ('gold', '1970-01-01 00:00:00+00', '1970-01-01T00:00:00Z', 'PENDENTE')
+    ('bronze', '1970-01-01 00:00:00+00', '1970-01-01T00:00:00Z', 'CANCELADO'),
+    ('gold', '1970-01-01 00:00:00+00', '1970-01-01T00:00:00Z', 'CANCELADO')
 ON CONFLICT (nome_pipeline) DO NOTHING;
