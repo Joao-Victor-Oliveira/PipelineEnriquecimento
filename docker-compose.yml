@@ -23,22 +23,29 @@ services:
 
   # Serviço 2: n8n
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n
     container_name: driva_n8n
-    restart: always
+    user: root  
     ports:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      # Configuração do Banco Interno do n8n (Onde ele salva workflows)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}       
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}         
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD} 
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - driva_network
+      - driva_network # <--- CORREÇÃO CRÍTICA (Conexão com Banco e API)
 
   # Serviço 3: API
   api:
@@ -49,7 +56,6 @@ services:
       - "3000:3000"
     environment:
       - DB_HOST=postgres
-      # as mesmas variáveis do banco
       - DB_USER=${POSTGRES_USER}
       - DB_PASS=${POSTGRES_PASSWORD}
       - DB_NAME=${POSTGRES_DB}
