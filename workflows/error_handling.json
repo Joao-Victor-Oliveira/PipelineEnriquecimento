@@ -1,0 +1,64 @@
+{
+  "name": "error_handling",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c676ade1-3ec2-4430-ba9c-475a2bd933dc",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO estado_pipeline_dw (\n    nome_pipeline, \n    data_ultimo_processo, \n    valor_marcador, \n    status, \n    total_registros_processados\n)\nVALUES (\n    'orquestrador_geral', \n    NOW(), \n    'ERRO: ' || '{{ $json.execution.error.message.substring(0, 40) }}', -- Pega o início do erro\n    'FALHOU', \n    (SELECT COUNT(*) FROM gold)\n)\nON CONFLICT (nome_pipeline) \nDO UPDATE SET \n    data_ultimo_processo = EXCLUDED.data_ultimo_processo,\n    status = EXCLUDED.status,\n    valor_marcador = EXCLUDED.valor_marcador;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "9d09a9ff-ea74-449f-ad21-a0c3697492aa",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2d09b216-2e4d-4c7d-982b-fccfa5c4c475",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d54bb7cef045f09ba16baa548dee28353d5ce856ada74f08a2ce71996108c5e9"
+  },
+  "id": "k48QQxtibiaYqgVP",
+  "tags": []
+}

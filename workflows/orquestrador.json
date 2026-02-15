@@ -1,0 +1,185 @@
+{
+  "name": "orquestrador",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "DipvZfztbWYQPYDZ",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/DipvZfztbWYQPYDZ",
+          "cachedResultName": "bronze"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ac2aeb78-efc8-46be-8c22-96c95472d8d2",
+      "name": "Call 'bronze'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CybHSDrCXt4nYMt3",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/CybHSDrCXt4nYMt3",
+          "cachedResultName": "gold"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9cc937f6-5a98-424f-9918-ddfbb2b1612f",
+      "name": "Call 'gold'"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO estado_pipeline_dw (\n    nome_pipeline, \n    data_ultimo_processo, \n    valor_marcador, \n    status, \n    total_registros_processados\n)\nVALUES (\n    'orquestrador_geral', \n    NOW(), \n    'INICIADO', \n    'EM_EXECUCAO', \n    0\n)\nON CONFLICT (nome_pipeline) \nDO UPDATE SET \n    data_ultimo_processo = EXCLUDED.data_ultimo_processo,\n    status = EXCLUDED.status,\n    valor_marcador = EXCLUDED.valor_marcador;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4870704a-eabd-4b86-bfa2-0832ee722abc",
+      "name": "Controle_inicio",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO estado_pipeline_dw (\n    nome_pipeline, \n    data_ultimo_processo, \n    valor_marcador, \n    status, \n    total_registros_processados\n)\nVALUES (\n    'orquestrador_geral', \n    NOW(), \n    'FINALIZADO', \n    'CONCLUIDO', \n    (SELECT COUNT(*) FROM gold)\n)\nON CONFLICT (nome_pipeline) \nDO UPDATE SET \n    data_ultimo_processo = EXCLUDED.data_ultimo_processo,\n    status = EXCLUDED.status,\n    total_registros_processados = EXCLUDED.total_registros_processados,\n    valor_marcador = EXCLUDED.valor_marcador;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a50d2682-2493-469f-b4ef-021453fca087",
+      "name": "Controle_fim",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "2b27adce-87dd-43fd-9dcd-37ef0e252a13",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Call 'bronze'": {
+      "main": [
+        [
+          {
+            "node": "Call 'gold'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'gold'": {
+      "main": [
+        [
+          {
+            "node": "Controle_fim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Controle_inicio": {
+      "main": [
+        [
+          {
+            "node": "Call 'bronze'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Controle_inicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "k48QQxtibiaYqgVP",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "eea61f55-9f7c-4069-8d61-deeda07fcc36",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d54bb7cef045f09ba16baa548dee28353d5ce856ada74f08a2ce71996108c5e9"
+  },
+  "id": "KhOEqTe60KA7FR0X",
+  "tags": []
+}

@@ -1,0 +1,480 @@
+{
+  "name": "gold",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) AS total FROM bronze;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -96,
+        0
+      ],
+      "id": "d1e873ee-20e6-472f-8f12-c0cf83a6fd88",
+      "name": "Count",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE estado_pipeline_dw \nSET \n    status = 'CONCLUIDO', \n    data_ultimo_processo = NOW(),\n    total_registros_processados = (SELECT count(*) FROM gold)\nWHERE nome_pipeline = 'gold';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        816,
+        -176
+      ],
+      "id": "58e6e599-e701-44cc-9bdc-9dbc1d538f4c",
+      "name": "Controle_fim",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE estado_pipeline_dw \nSET status = 'EM_PROCESSAMENTO', data_ultimo_processo = NOW() \nWHERE nome_pipeline = 'gold';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        0
+      ],
+      "id": "ae8f9ff7-18e2-4fba-811a-86e07d5803c7",
+      "name": "Controle_inicio",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4328c214-004f-49a8-a3e3-efd1efbe99c8",
+              "name": "total",
+              "value": "={{ $json.total }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        -176
+      ],
+      "id": "f9deca49-8a9c-430e-a0bd-64f3f29b05fa",
+      "name": "total"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM bronze \nORDER BY id \nLIMIT 100 \nOFFSET {{ $json.offset || 0 }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        16
+      ],
+      "id": "c8b9ea50-85b5-4e88-a513-fe2e414f71a1",
+      "name": "Get",
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "gold",
+          "mode": "list",
+          "cachedResultName": "gold"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "processamento_sucesso": false,
+            "necessita_reprocessamento": false,
+            "total_contatos": 0,
+            "duracao_processamento_minutos": 0,
+            "tempo_por_contato_minutos": 0
+          },
+          "matchingColumns": [
+            "id_enriquecimento"
+          ],
+          "schema": [
+            {
+              "id": "id_enriquecimento",
+              "displayName": "id_enriquecimento",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_workspace",
+              "displayName": "id_workspace",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "nome_workspace",
+              "displayName": "nome_workspace",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "total_contatos",
+              "displayName": "total_contatos",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "tipo_contato",
+              "displayName": "tipo_contato",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status_processamento",
+              "displayName": "status_processamento",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "options",
+              "canBeUsedToMatch": false,
+              "options": [
+                {
+                  "name": "CANCELADO",
+                  "value": "CANCELADO"
+                },
+                {
+                  "name": "EM_PROCESSAMENTO",
+                  "value": "EM_PROCESSAMENTO"
+                },
+                {
+                  "name": "FALHOU",
+                  "value": "FALHOU"
+                },
+                {
+                  "name": "CONCLUIDO",
+                  "value": "CONCLUIDO"
+                }
+              ]
+            },
+            {
+              "id": "data_criacao",
+              "displayName": "data_criacao",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "data_atualizacao",
+              "displayName": "data_atualizacao",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "duracao_processamento_minutos",
+              "displayName": "duracao_processamento_minutos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "tempo_por_contato_minutos",
+              "displayName": "tempo_por_contato_minutos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "processamento_sucesso",
+              "displayName": "processamento_sucesso",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "categoria_tamanho_job",
+              "displayName": "categoria_tamanho_job",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "necessita_reprocessamento",
+              "displayName": "necessita_reprocessamento",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "data_atualizacao_dw",
+              "displayName": "data_atualizacao_dw",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1248,
+        16
+      ],
+      "id": "3afcba44-2192-4e5a-829d-4265b71e82ac",
+      "name": "Insert",
+      "credentials": {
+        "postgres": {
+          "id": "XqGHBtn0U74ZMRG0",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// O n8n recebe os dados em um array chamado $input.all()\nconst items = $input.all();\nconst resultado = [];\n\nfor (const item of items) {\n    const bronze = item.json;\n\n    // 1. Tratamento de Datas e Cálculo de Duração\n    const dtCriacao = new Date(bronze.created_at);\n    const dtAtualizacao = new Date(bronze.updated_at);\n    \n    // Cálculo da diferença em minutos: (ms / 1000) / 60\n    const duracaoMin = Math.round(((dtAtualizacao - dtCriacao) / 60000) * 10000) / 10000;\n\n    // 2. Cálculo de Tempo por Contato\n    const totalContatos = parseInt(bronze.total_contacts || 0);\n    const tempoContato = totalContatos > 0 ? Math.round((duracaoMin / totalContatos) * 10000) / 10000 : 0;\n\n    // 3. Categorização por Tamanho de Job\n    let categoria = \"PEQUENO\";\n    if (totalContatos > 1000) {\n        categoria = \"MUITO_GRANDE\";\n    } else if (totalContatos > 500) {\n        categoria = \"GRANDE\";\n    } else if (totalContatos >= 100) {\n        categoria = \"MEDIO\";\n    }\n\n    // 4. Tradução de Status e Tipos\n    const statusMap = {\n        'PROCESSING': 'EM_PROCESSAMENTO',\n        'COMPLETED': 'CONCLUIDO',\n        'FAILED': 'FALHOU',\n        'CANCELED': 'CANCELADO'\n    };\n    \n    const tipoMap = {\n        'PERSON': 'PESSOA',\n        'COMPANY': 'EMPRESA'\n    };\n\n    const statusRaw = bronze.status || 'PROCESSING';\n\n    // 5. Montagem do Objeto para a Tabela Gold\n    resultado.push({\n        json: {\n            id_enriquecimento: bronze.id,\n            id_workspace: bronze.id_workspace,\n            nome_workspace: bronze.workspace_name,\n            total_contatos: totalContatos,\n            tipo_contato: tipoMap[bronze.contact_type] || 'PESSOA',\n            status_processamento: statusMap[statusRaw] || 'EM_PROCESSAMENTO',\n            data_criacao: dtCriacao.toISOString(),\n            data_atualizacao: dtAtualizacao.toISOString(),\n            duracao_processamento_minutos: duracaoMin,\n            tempo_por_contato_minutos: tempoContato,\n            processamento_sucesso: statusRaw === 'COMPLETED',\n            categoria_tamanho_job: categoria,\n            necessita_reprocessamento: ['FAILED', 'CANCELED'].includes(statusRaw),\n            data_atualizacao_dw: new Date().toISOString()\n        }\n    });\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "83b960fe-1c45-4e9b-97c6-610b503dafc1",
+      "name": "Tratamento"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        608,
+        -80
+      ],
+      "id": "71f402c9-ab5a-4827-8779-1efe6e03c8e7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = $('total').first().json.total ;\nconst batchSize = 100;\nconst offsets = [];\n\nfor (let i = 0; i < total; i += batchSize) {\n    offsets.push({ offset: i });\n}\n\nreturn offsets;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ],
+      "id": "1013e6e6-28d0-4729-98e7-60317361b6a4",
+      "name": "Offsets"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "29850705-0988-4072-a560-b60d70dce13d",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Controle_inicio": {
+      "main": [
+        [
+          {
+            "node": "Offsets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count": {
+      "main": [
+        [
+          {
+            "node": "total",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "total": {
+      "main": [
+        [
+          {
+            "node": "Controle_inicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get": {
+      "main": [
+        [
+          {
+            "node": "Tratamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tratamento": {
+      "main": [
+        [
+          {
+            "node": "Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Controle_fim",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offsets": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "13cd22d4-b970-4e29-9c90-70857af3dfb8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d54bb7cef045f09ba16baa548dee28353d5ce856ada74f08a2ce71996108c5e9"
+  },
+  "id": "CybHSDrCXt4nYMt3",
+  "tags": []
+}
