@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driva - Dashboard de Visibilidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <nav class="bg-blue-900 p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-white text-2xl font-bold uppercase tracking-wider">HubDriva | Monitoramento Gold</h1>
+            <span class="text-blue-200 text-sm">Atualizado a cada 5 min</span>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Total de Enriquecimentos</p>
+                <p class="text-3xl font-bold text-gray-800">{{ total_jobs }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Taxa de Sucesso</p>
+                <p class="text-3xl font-bold text-gray-800">{{ taxa_sucesso }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Tempo Médio de Processamento</p>
+                <p class="text-3xl font-bold text-gray-800">{{ tempo_medio }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4 text-gray-700">Distribuição por Categoria</h3>
+                <canvas id="categoryChart" height="150"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4 text-gray-700">Status dos Jobs</h3>
+                <canvas id="statusChart" height="150"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-700">Lista Recente de Enriquecimentos</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold">
+                            <th class="p-4 border-b">ID Enriquecimento [cite: 131]</th>
+                            <th class="p-4 border-b">Workspace [cite: 136]</th>
+                            <th class="p-4 border-b">Tamanho [cite: 151]</th>
+                            <th class="p-4 border-b">Duração (min) [cite: 148]</th>
+                            <th class="p-4 border-b">Status [cite: 141]</th>
+                            <th class="p-4 border-b">Reprocessar? </th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700 text-sm">
+                        {% for item in enriquecimentos %}
+                        <tr class="hover:bg-blue-50 transition-colors">
+                            <td class="p-4 border-b font-mono text-xs">{{ item.id_enriquecimento }}</td>
+                            <td class="p-4 border-b">{{ item.nome_workspace }}</td>
+                            <td class="p-4 border-b">
+                                <span class="px-2 py-1 rounded text-xs font-bold 
+                                    {% if item.categoria_tamanho_job == 'MUITO_GRANDE' %} bg-red-100 text-red-700
+                                    {% elif item.categoria_tamanho_job == 'GRANDE' %} bg-orange-100 text-orange-700
+                                    {% else %} bg-blue-100 text-blue-700 {% endif %}">
+                                    {{ item.categoria_tamanho_job }}
+                                </span>
+                            </td>
+                            <td class="p-4 border-b">{{ item.duracao_processamento_minutos }}</td>
+                            <td class="p-4 border-b font-bold 
+                                {% if item.status_processamento == 'CONCLUIDO' %} text-green-600 
+                                {% elif item.status_processamento == 'FALHOU' %} text-red-600 
+                                {% else %} text-yellow-600 {% endif %}">
+                                {{ item.status_processamento }}
+                            </td>
+                            <td class="p-4 border-b text-center">
+                                {% if item.necessita_reprocessamento %} ⚠️ {% else %} ✅ {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{ labels_categoria|json_script:"labels-cat" }}
+    {{ valores_categoria|json_script:"valores-cat" }}
+    {{ labels_status|json_script:"labels-stat" }}
+    {{ valores_status|json_script:"valores-stat" }}
+
+    <script>
+        // Função para carregar dados dos scripts JSON
+        const getJsonData = (id) => JSON.parse(document.getElementById(id).textContent);
+
+        // Gráfico de Categorias [cite: 151-155]
+        new Chart(document.getElementById('categoryChart'), {
+            type: 'bar',
+            data: {
+                labels: getJsonData('labels-cat'),
+                datasets: [{
+                    label: 'Quantidade de Jobs',
+                    data: getJsonData('valores-cat'),
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        // Gráfico de Status [cite: 160-164]
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: getJsonData('labels-stat'),
+                datasets: [{
+                    data: getJsonData('valores-stat'),
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#6b7280']
+                }]
+            },
+            options: { responsive: true }
+        });
+    </script>
+</body>
+</html>

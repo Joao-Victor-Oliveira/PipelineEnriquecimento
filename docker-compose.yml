@@ -3,7 +3,7 @@ services:
   postgres:
     image: postgres:14-alpine
     container_name: driva_postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -45,7 +45,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - driva_network # <--- CORREÇÃO CRÍTICA (Conexão com Banco e API)
+      - driva_network 
 
   # Serviço 3: API
   api:
@@ -65,6 +65,28 @@ services:
         condition: service_healthy
     networks:
       - driva_network
+
+  # Serviço 4: Dashboard
+  frontend:
+    build: ./dashboard
+    container_name: driva_dashboard
+    restart: always
+    volumes:
+      - ./dashboard:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - "PYTHONUNBUFFERED=1" # Garante que os logs apareçam na hora no seu terminal
+      - "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+    # O comando abaixo aplica as tabelas do Django e sobe o servidor
+    command: >
+      sh -c "python manage.py migrate && 
+             python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - driva_network # Vital para ele "enxergar" o serviço 'postgres'
 
 networks:
   driva_network:

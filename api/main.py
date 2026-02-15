@@ -142,16 +142,60 @@ async def get_enrichments(
     finally:
         if conn: conn.close()
 
-# Endpoint para testar o Dashboard
-# PROVISÓRIO
+
 @app.get("/analytics/overview")
 async def get_analytics_overview():
     conn = get_db_connection()
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        # Lê da tabela 'bronze' 
-        cursor.execute("SELECT count(*) as total_ingested FROM bronze")
+        
+        # Query unificada para KPIs da Camada Gold
+        query = """
+        SELECT 
+            COUNT(*) as total_jobs,
+            ROUND(AVG(duracao_processamento_minutos)::numeric, 2) as tempo_medio_min,
+            ROUND(
+                (COUNT(*) FILTER (WHERE processamento_sucesso = TRUE) * 100.0 / NULLIF(COUNT(*), 0))::numeric, 
+                2
+            ) as taxa_sucesso_perc,
+            -- Distribuição por categoria para o gráfico
+            JSONB_OBJECT_AGG(categoria, qtd) as distribuicao_tamanho
+        FROM (
+            SELECT categoria_tamanho_job as categoria, COUNT(*) as qtd
+            FROM gold
+            GROUP BY categoria_tamanho_job
+        ) as subquery, gold;
+        """
+        
+        cursor.execute(query)
         result = cursor.fetchone()
-        return {"kpis": result}
+        
+        return {
+            "status": "success",
+            "data": {
+                "total_enriquecimentos": result['total_jobs'], # 
+                "taxa_sucesso": f"{result['taxa_sucesso_perc']}%", # 
+                "tempo_medio_processamento": f"{result['tempo_medio_min']} min", # 
+                "grafico_distribuicao": result['distribuicao_tamanho'] # [cite: 203]
+            }
+        }
+    finally:
+        if conn: conn.close()
+
+@app.get("/analytics/enrichments")
+async def get_analytics_enrichments(limit: int = 10, offset: int = 0):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        # Seleciona os dados traduzidos da Gold [cite: 131-146]
+        cursor.execute("""
+            SELECT id_enriquecimento, nome_workspace, status_processamento, 
+                   data_criacao, duracao_processamento_minutos, categoria_tamanho_job
+            FROM gold 
+            ORDER BY data_criacao DESC 
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
+        
+        return cursor.fetchall()
     finally:
         if conn: conn.close()
