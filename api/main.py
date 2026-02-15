@@ -149,36 +149,36 @@ async def get_analytics_overview():
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Query unificada para KPIs da Camada Gold
         query = """
         SELECT 
-            COUNT(*) as total_jobs,
-            ROUND(AVG(duracao_processamento_minutos)::numeric, 2) as tempo_medio_min,
-            ROUND(
+            COUNT(*)::int as total_jobs,
+            COALESCE(ROUND(AVG(duracao_processamento_minutos)::numeric, 2), 0) as tempo_medio_min,
+            COALESCE(ROUND(
                 (COUNT(*) FILTER (WHERE processamento_sucesso = TRUE) * 100.0 / NULLIF(COUNT(*), 0))::numeric, 
                 2
-            ) as taxa_sucesso_perc,
-            -- Distribuição por categoria para o gráfico
-            JSONB_OBJECT_AGG(categoria, qtd) as distribuicao_tamanho
-        FROM (
-            SELECT categoria_tamanho_job as categoria, COUNT(*) as qtd
-            FROM gold
-            GROUP BY categoria_tamanho_job
-        ) as subquery, gold;
+            ), 0) as taxa_sucesso_perc
+        FROM gold;
         """
-        
         cursor.execute(query)
         result = cursor.fetchone()
+
+        # Query separada para a distribuição 
+        cursor.execute("SELECT categoria_tamanho_job as categoria, COUNT(*)::int as qtd FROM gold GROUP BY categoria_tamanho_job")
+        dist_rows = cursor.fetchall()
+        distribuicao = {row['categoria']: row['qtd'] for row in dist_rows}
         
         return {
             "status": "success",
             "data": {
-                "total_enriquecimentos": result['total_jobs'], # 
-                "taxa_sucesso": f"{result['taxa_sucesso_perc']}%", # 
-                "tempo_medio_processamento": f"{result['tempo_medio_min']} min", # 
-                "grafico_distribuicao": result['distribuicao_tamanho'] # [cite: 203]
+                "total_enriquecimentos": result['total_jobs'],
+                "taxa_sucesso": f"{result['taxa_sucesso_perc']}%",
+                "tempo_medio_processamento": f"{result['tempo_medio_min']} min",
+                "grafico_distribuicao": distribuicao
             }
         }
+    except Exception as e:
+        print(f"Erro no Analytics: {e}")
+        return {"status": "error", "message": str(e)}
     finally:
         if conn: conn.close()
 
@@ -197,5 +197,32 @@ async def get_analytics_enrichments(limit: int = 10, offset: int = 0):
         """, (limit, offset))
         
         return cursor.fetchall()
+    finally:
+        if conn: conn.close()
+
+@app.get("/analytics/summary")
+async def get_analytics_summary():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Total e Tempo Médio
+        cursor.execute("SELECT COUNT(*) as total, AVG(duracao_processamento_minutos) as media FROM gold")
+        res = cursor.fetchone()
+        
+        # 2. Distribuição por Categoria
+        cursor.execute("SELECT categoria_tamanho_job, COUNT(*) as qtd FROM gold GROUP BY categoria_tamanho_job")
+        categorias = cursor.fetchall()
+        
+        # 3. Distribuição por Status
+        cursor.execute("SELECT status_processamento, COUNT(*) as qtd FROM gold GROUP BY status_processamento")
+        status = cursor.fetchall()
+
+        return {
+            "total_jobs": res['total'],
+            "tempo_medio": round(res['media'] or 0, 2),
+            "categorias": categorias,
+            "status": status
+        }
     finally:
         if conn: conn.close()

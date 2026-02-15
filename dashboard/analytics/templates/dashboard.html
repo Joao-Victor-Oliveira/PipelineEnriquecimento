@@ -12,7 +12,7 @@
     <nav class="bg-blue-900 p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-white text-2xl font-bold uppercase tracking-wider">HubDriva | Monitoramento Gold</h1>
-            <span class="text-blue-200 text-sm">Atualizado a cada 5 min</span>
+            <span class="text-blue-200 text-sm">Dados via API Analytics</span>
         </div>
     </nav>
 
@@ -28,7 +28,7 @@
                 <p class="text-3xl font-bold text-gray-800">{{ taxa_sucesso }}</p>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Tempo Médio de Processamento</p>
+                <p class="text-gray-500 text-sm font-semibold uppercase">Tempo Médio (Processamento)</p>
                 <p class="text-3xl font-bold text-gray-800">{{ tempo_medio }}</p>
             </div>
         </div>
@@ -44,24 +44,38 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-700">Lista Recente de Enriquecimentos</h3>
-            </div>
+        <div class="bg-white p-4 rounded-t-xl shadow-md border-b flex flex-col md:flex-row justify-between items-center gap-4">
+            <h3 class="text-lg font-bold text-gray-700">Explorador de Dados (Camada Gold)</h3>
+            
+            <form method="get" class="flex items-center gap-2">
+                <label for="status" class="text-sm font-medium text-gray-600">Filtrar:</label>
+                <select name="status" id="status" onchange="this.form.submit()" class="bg-gray-50 border border-gray-300 text-sm rounded-lg p-2">
+                    <option value="">Todos os Status</option>
+                    {% for st in status_list %}
+                    <option value="{{ st }}" {% if current_status == st %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+                {% if current_status %}
+                <a href="/" class="text-xs text-red-500 hover:underline">Limpar</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="bg-white rounded-b-xl shadow-md overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold">
-                            <th class="p-4 border-b">ID Enriquecimento [cite: 131]</th>
-                            <th class="p-4 border-b">Workspace [cite: 136]</th>
-                            <th class="p-4 border-b">Tamanho [cite: 151]</th>
-                            <th class="p-4 border-b">Duração (min) [cite: 148]</th>
-                            <th class="p-4 border-b">Status [cite: 141]</th>
-                            <th class="p-4 border-b">Reprocessar? </th>
+                            <th class="p-4 border-b">ID Enriquecimento</th>
+                            <th class="p-4 border-b">Workspace</th>
+                            <th class="p-4 border-b">Tamanho</th>
+                            <th class="p-4 border-b">Duração (min)</th>
+                            <th class="p-4 border-b">Status</th>
+                            <th class="p-4 border-b">Ação</th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-700 text-sm">
-                        {% for item in enriquecimentos %}
+                        {% for item in page_obj %}
                         <tr class="hover:bg-blue-50 transition-colors">
                             <td class="p-4 border-b font-mono text-xs">{{ item.id_enriquecimento }}</td>
                             <td class="p-4 border-b">{{ item.nome_workspace }}</td>
@@ -80,13 +94,32 @@
                                 {% else %} text-yellow-600 {% endif %}">
                                 {{ item.status_processamento }}
                             </td>
-                            <td class="p-4 border-b text-center">
-                                {% if item.necessita_reprocessamento %} ⚠️ {% else %} ✅ {% endif %}
+                            <td class="p-4 border-b text-center text-xl">
+                                {% if item.status_processamento == 'FALHOU' or item.status_processamento == 'CANCELADO' %} ⚠️ {% else %} ✅ {% endif %}
                             </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-gray-500 italic">Nenhum dado retornado pela API.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t flex items-center justify-between">
+                <p class="text-sm text-gray-600">
+                    Página atual: <b>{{ current_page }}</b>
+                </p>
+                <div class="inline-flex gap-2">
+                    {% if current_page > 1 %}
+                    <a href="?page={{ current_page|add:"-1" }}{% if current_status %}&status={{ current_status }}{% endif %}" 
+                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50">Anterior</a>
+                    {% endif %}
+                    
+                    <a href="?page={{ current_page|add:"1" }}{% if current_status %}&status={{ current_status }}{% endif %}" 
+                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50">Próxima</a>
+                </div>
             </div>
         </div>
     </div>
@@ -97,10 +130,9 @@
     {{ valores_status|json_script:"valores-stat" }}
 
     <script>
-        // Função para carregar dados dos scripts JSON
         const getJsonData = (id) => JSON.parse(document.getElementById(id).textContent);
 
-        // Gráfico de Categorias [cite: 151-155]
+        // Gráfico de Barras: Categorias
         new Chart(document.getElementById('categoryChart'), {
             type: 'bar',
             data: {
@@ -114,7 +146,7 @@
             options: { responsive: true, plugins: { legend: { display: false } } }
         });
 
-        // Gráfico de Status [cite: 160-164]
+        // Gráfico de Rosca: Status
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
             data: {
