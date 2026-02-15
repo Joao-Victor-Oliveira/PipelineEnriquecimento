@@ -183,19 +183,28 @@ async def get_analytics_overview():
         if conn: conn.close()
 
 @app.get("/analytics/enrichments")
-async def get_analytics_enrichments(limit: int = 10, offset: int = 0):
+async def get_analytics_enrichments(
+    limit: int = 10, 
+    offset: int = 0, 
+    status: Optional[str] = None
+):
     conn = get_db_connection()
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        # Seleciona os dados traduzidos da Gold [cite: 131-146]
-        cursor.execute("""
-            SELECT id_enriquecimento, nome_workspace, status_processamento, 
-                   data_criacao, duracao_processamento_minutos, categoria_tamanho_job
-            FROM gold 
-            ORDER BY data_criacao DESC 
-            LIMIT %s OFFSET %s
-        """, (limit, offset))
         
+        # Base da consulta na camada Gold [cite: 131-146]
+        sql = "SELECT * FROM gold "
+        params = []
+
+        # Se houver filtro de status, adicionamos a cláusula WHERE [cite: 108]
+        if status:
+            sql += " WHERE status_processamento = %s "
+            params.append(status)
+
+        sql += " ORDER BY data_criacao DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+
+        cursor.execute(sql, tuple(params))
         return cursor.fetchall()
     finally:
         if conn: conn.close()
@@ -223,6 +232,31 @@ async def get_analytics_summary():
             "tempo_medio": round(res['media'] or 0, 2),
             "categorias": categorias,
             "status": status
+        }
+    finally:
+        if conn: conn.close()
+
+@app.get("/analytics/workspaces/top")
+async def get_top_workspaces(limit: int = Query(5, le=20)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        query = """
+            SELECT nome_workspace, 
+                   COUNT(*) as total_jobs,
+                   SUM(total_contatos) as volume_contatos
+            FROM gold 
+            GROUP BY nome_workspace 
+            ORDER BY volume_contatos DESC 
+            LIMIT %s
+        """
+        cursor.execute(query, (limit,))
+        ranking = cursor.fetchall()
+        
+        return {
+            "status": "success",
+            "data": ranking
         }
     finally:
         if conn: conn.close()

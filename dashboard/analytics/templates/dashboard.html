@@ -12,7 +12,7 @@
     <nav class="bg-blue-900 p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-white text-2xl font-bold uppercase tracking-wider">HubDriva | Monitoramento Gold</h1>
-            <span class="text-blue-200 text-sm">Dados via API Analytics</span>
+            <span class="text-blue-200 text-sm">Dados via API Analytics [cite: 21]</span>
         </div>
     </nav>
 
@@ -33,14 +33,18 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-md">
                 <h3 class="text-lg font-bold mb-4 text-gray-700">Distribuição por Categoria</h3>
-                <canvas id="categoryChart" height="150"></canvas>
+                <canvas id="categoryChart" height="200"></canvas>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-md">
                 <h3 class="text-lg font-bold mb-4 text-gray-700">Status dos Jobs</h3>
-                <canvas id="statusChart" height="150"></canvas>
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4 text-gray-700">Top 5 Workspaces (Volume)</h3>
+                <canvas id="topWorkspacesChart" height="200"></canvas>
             </div>
         </div>
 
@@ -66,12 +70,12 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold">
-                            <th class="p-4 border-b">ID Enriquecimento</th>
-                            <th class="p-4 border-b">Workspace</th>
-                            <th class="p-4 border-b">Tamanho</th>
-                            <th class="p-4 border-b">Duração (min)</th>
-                            <th class="p-4 border-b">Status</th>
-                            <th class="p-4 border-b">Ação</th>
+                            <th class="p-4 border-b">ID Enriquecimento [cite: 131]</th>
+                            <th class="p-4 border-b">Workspace [cite: 136]</th>
+                            <th class="p-4 border-b">Tamanho [cite: 151]</th>
+                            <th class="p-4 border-b">Duração (min) [cite: 148]</th>
+                            <th class="p-4 border-b">Status [cite: 141]</th>
+                            <th class="p-4 border-b text-center">Ação</th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-700 text-sm">
@@ -114,11 +118,11 @@
                 <div class="inline-flex gap-2">
                     {% if current_page > 1 %}
                     <a href="?page={{ current_page|add:"-1" }}{% if current_status %}&status={{ current_status }}{% endif %}" 
-                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50">Anterior</a>
+                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition">Anterior</a>
                     {% endif %}
                     
                     <a href="?page={{ current_page|add:"1" }}{% if current_status %}&status={{ current_status }}{% endif %}" 
-                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50">Próxima</a>
+                       class="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition">Próxima</a>
                 </div>
             </div>
         </div>
@@ -128,17 +132,19 @@
     {{ valores_categoria|json_script:"valores-cat" }}
     {{ labels_status|json_script:"labels-stat" }}
     {{ valores_status|json_script:"valores-stat" }}
+    {{ labels_top|json_script:"labels-top" }}
+    {{ valores_top|json_script:"valores-top" }}
 
     <script>
         const getJsonData = (id) => JSON.parse(document.getElementById(id).textContent);
 
-        // Gráfico de Barras: Categorias
+        // Gráfico de Barras: Categorias [cite: 151-155]
         new Chart(document.getElementById('categoryChart'), {
             type: 'bar',
             data: {
                 labels: getJsonData('labels-cat'),
                 datasets: [{
-                    label: 'Quantidade de Jobs',
+                    label: 'Jobs por Tamanho',
                     data: getJsonData('valores-cat'),
                     backgroundColor: '#3b82f6'
                 }]
@@ -146,7 +152,7 @@
             options: { responsive: true, plugins: { legend: { display: false } } }
         });
 
-        // Gráfico de Rosca: Status
+        // Gráfico de Rosca: Status [cite: 161-164]
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
             data: {
@@ -157,6 +163,23 @@
                 }]
             },
             options: { responsive: true }
+        });
+
+        new Chart(document.getElementById('topWorkspacesChart'), {
+            type: 'bar',
+            data: {
+                labels: getJsonData('labels-top'),
+                datasets: [{
+                    label: 'Volume de Contatos',
+                    data: getJsonData('valores-top'),
+                    backgroundColor: '#1e3a8a'
+                }]
+            },
+            options: { 
+                indexAxis: 'y', // Inverte para horizontal
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
         });
     </script>
 </body>
