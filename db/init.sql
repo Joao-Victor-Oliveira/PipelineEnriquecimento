@@ -85,3 +85,14 @@ VALUES
     ('bronze', '1970-01-01 00:00:00+00', '0', 'AGUARDANDO'),
     ('gold', '1970-01-01 00:00:00+00', '0', 'AGUARDANDO')
 ON CONFLICT DO NOTHING;
+
+-- Otimiza a busca do n8n por registros novos na Bronze [cite: 175]
+CREATE INDEX IF NOT EXISTS idx_bronze_updated_at ON bronze(updated_at);
+
+-- Otimiza os filtros do Dashboard na Gold [cite: 108, 113]
+CREATE INDEX IF NOT EXISTS idx_gold_status ON gold(status_processamento);
+CREATE INDEX IF NOT EXISTS idx_gold_workspace ON gold(id_workspace);
+CREATE INDEX IF NOT EXISTS idx_gold_data_criacao ON gold(data_criacao DESC);
+
+-- Otimiza o Ranking de Workspaces (Bônus) [cite: 110]
+CREATE INDEX IF NOT EXISTS idx_gold_volume ON gold(total_contatos);
