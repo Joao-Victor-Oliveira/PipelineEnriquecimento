@@ -80,4 +80,10 @@ Workflows n8n (3 partes):
     bronze: Pega os dados brutos da api e salva no banco
     gold  : Resgata os dados da bronze processa e guarda no banco
     orquestrador: roda a pipeline com pooling de 5 minutos chamando os workflos acima
+
+https://www.youtube.com/watch?v=J3GtXCpeCcQ&list=PLxHiMPnrEswJJQop3RE4YRvyLiHVOKad6
+
+
+
+
  
